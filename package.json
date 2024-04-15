@@ -1,0 +1,16 @@
+{
+  "name": "fwt",
+  "version": "1.0.0",
+  "description": "File Wranging Tool",
+  "copyright": "Copyright © 2024 Topten Software",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@toptensoftware/sqlite": "github:toptensoftware/sqlite",
+    "better-sqlite3": "^9.5.0"
+  }
+}
