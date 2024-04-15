@@ -11,7 +11,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\index.js",
+            "program": "${workspaceFolder}\\utils/glob.js",
             "args": [
                 "finddups",
                 "\\\\cool\\photos\\2003"

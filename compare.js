@@ -1,7 +1,8 @@
 let path = require('path');
 let fs = require('fs');
 let commandLineParser = require('./utils/commandLineParser');
-let glob = require('./utils/glob');
+let glob = require('glob');
+let os = require('os');
 
 function processDir(source, target, options)
 {
@@ -13,12 +14,20 @@ function processDir(source, target, options)
 
         sourceItems.forEach(i => {
 
-            if (shouldExclude(i))
-                return;
-
             // Get paths to both
             var si = path.join(source, i);
             var ti = path.join(target, i);
+
+            // Append directory indicator
+            var ss = fs.statSync(si);
+            if (ss.isDirectory())
+            {
+                si += "/";
+                ti += "/";
+            }
+
+            if (options.shouldExclude(si))
+                return;
 
             // Check exists
             if (!targetItems.has(i))
@@ -32,7 +41,6 @@ function processDir(source, target, options)
             targetItems.delete(i);
 
             // Stat both
-            var ss = fs.statSync(si);
             var ts = fs.statSync(ti);
 
             // Directory/file mismatch?
@@ -59,24 +67,66 @@ function processDir(source, target, options)
         });
 
         targetItems.forEach(i => {
-            if (shouldExclude(i))
+            var si = path.join(source, i);
+            if (shouldExclude(si))
                 return;
             if (!options.noLeft)
-                console.log(`  missing: ${path.join(source, i)}`);
+                console.log(`  missing: ${si}`);
         });
     }
     catch (err)
     {
         console.error(` ${err.message}`);
     }
-
-    function shouldExclude(name)
-    {
-        return options.exclude.some(x => name.match(x) != null);
-    }
 }
 
 
+function makeExcluder(options)
+{
+    // No exclude patterns
+    if (!options.exclude || options.exclude.length == 0)
+        return (x) => false;
+
+    // On windows convert all backslashes to forward slashes
+    let convertBackslashes = os.platform() === "win32";
+
+    // Convert pattens to regexp and negative flag
+    var patterns = options.exclude.map(x => {
+        let negative = x.startsWith('!');
+        if (negative)
+            x = x.substring(1);
+        if (convertBackslashes)
+            x = x.replace(/\\/g, '/');
+        return {
+            negative,
+            rx: new RegExp(glob(x), options.icase ? "i" : "")
+        };
+    });
+
+
+    // Returns true if file should be ignored
+    return function(filepath)
+    {
+        // Convert backslashes to forward slashes
+        if (convertBackslashes)
+            filepath = filepath.replace(/\\/g, "/");
+
+        // Make sure there's a leading slash
+        if (!filepath[0] == '/')
+            filepath = "/" + x;
+
+        // Find last matching pattern
+        for (let i= patterns.length-1; i>=0; i--)
+        {
+            let p = patterns[i];
+            if (filepath.match(x) != null)
+                return !p.negative;
+        }
+
+        // Didn't match any patterns, so file is included
+        return false;
+    }
+}
 
 
 module.exports = function main(args)
@@ -103,6 +153,11 @@ module.exports = function main(args)
                 help: "Don't show missing files in the right directory",
             },
             {
+                name: "--icase",
+                help: "Case insensitive exclude patten matching (default is true for Windows, else false)",
+                default: os.platform() === 'win32',
+            },
+            {
                 name: "--exclude:<spec>",
                 default: [],
                 help: "Glob pattern for files to exclude",
@@ -111,11 +166,7 @@ module.exports = function main(args)
         ]
     });
 
-    // Convert exclude patterns to regexps
-    for (let i=0; i<cl.exclude.length; i++)
-    {
-        cl.exclude[i] = new RegExp(glob(cl.exclude[i]), 'i');
-    }
+    options.shouldExclude = makeExcluder(cl);
 
     processDir(cl.left, cl.right, cl);
 }
