@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 let commandLineParser = require('./utils/commandLineParser.js');
 
 var parser = commandLineParser.parser({
