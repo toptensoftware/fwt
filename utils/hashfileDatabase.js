@@ -121,6 +121,15 @@ class hashfileDatabase extends Database
         this.purged += idsToDelete.length;
     }
 
+    remap(from, to)
+    {
+        let sql = SQL
+            .update("Files")
+            .append("SET dir=? || SUBSTR(dir, ?)", to, from.length + 1)
+            .append("WHERE dir = ? OR SUBSTR(dir, 1, ?) = ?", from, from.length + 1, from + path.sep);
+        let r = this.run(sql);
+        console.log(`Remapped ${r.changes} files`);
+    }
 
     migrate_1()
     {

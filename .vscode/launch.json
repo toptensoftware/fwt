@@ -13,8 +13,9 @@
             ],
             "program": "${workspaceFolder}\\index.js",
             "args": [
-                "compare",
-                "--help",
+                "remap",
+                "C:\\BLAH",
+                "C:\\Users\\Brad\\Projects\\fwt\\dira",
             ]
         }
     ]
