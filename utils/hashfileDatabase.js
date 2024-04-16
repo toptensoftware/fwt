@@ -16,6 +16,24 @@ class hashfileDatabase extends Database
         ]);
     }
 
+    are_files_equal(a, b, lazy)
+    {
+        var astat = fs.statSync(a);
+        var bstat = fs.statSync(b);
+
+        if (!astat.isFile() || !bstat.isFile())
+            return false;
+        if (astat.mtimeMs != bstat.mtimeMs)
+            return false;
+        if (astat.size != bstat.size)
+            return false;
+
+        var ahash = this.get_hash_of_file(a, lazy);
+        var bhash = this.get_hash_of_file(b, lazy);
+
+        return ahash === bhash;
+    }
+
     get_hash_of_file(file, lazy)
     {
         // Resolve to absolute path

@@ -164,6 +164,8 @@ module.exports = function main(args)
     var excluder = makeExcluder(cl);
     cl.shouldExclude = (x) => excluder(x.substring(cl.source.length));
 
+    cl.db =  new hashfileDatabase();
+    
     // Process directories
     processDir(cl.source, cl.target, cl);
 

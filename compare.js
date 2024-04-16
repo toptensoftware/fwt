@@ -3,7 +3,11 @@ let fs = require('fs');
 let os = require('os');
 let commandLineParser = require('./utils/commandLineParser');
 let makeExcluder = require('./utils/makeExcluder');
+let hashfileDatabase = require('./utils/hashfileDatabase');
 
+let leftMissing = 0;
+let rightMissing = 0;
+let different = 0;
 
 function processDir(source, target, options)
 {
@@ -34,7 +38,10 @@ function processDir(source, target, options)
             if (!targetItems.has(i))
             {
                 if (!options.noRight)
+                {
                     console.log(`  missing: ${ti}`);
+                    rightMissing++;
+                }
                 return;
             }
 
@@ -48,6 +55,7 @@ function processDir(source, target, options)
             if (ts.isDirectory() != ss.isDirectory())
             {
                 console.log(`different: ${si} <> ${ti}`)
+                different++;
                 return;
             }
 
@@ -58,13 +66,39 @@ function processDir(source, target, options)
             }
             else
             {
-                // Same?
-                if (ss.size != ts.size || Math.abs(ss.mtimeMs - ts.mtimeMs) > 2000)
+                let sameTime = Math.abs(ss.mtimeMs - ts.mtimeMs) <= 2000;
+                let same = ss.size == ts.size && sameTime;
+                if (same && !options.attrs)
                 {
-                    console.log(`different: ${si} <> ${ti}`)
+                    same = options.db.are_files_equal(si, ti, false);
+                }
+                if (!same)
+                {
+                    let reason = "";
+                    if (!sameTime && ss.mtimeMs > ts.mtimeMs)
+                    {
+                        reason = ` (left newer)`;
+                    }
+                    else if (!sameTime && ss.mtimeMs < ts.mtimeMs)
+                    {
+                        reason = ` (right newer)`;
+                    }
+                    else if (ss.size > ts.size)
+                    {
+                        reason = ` (left larger)`;
+                    }
+                    else if (ss.size < ts.size)
+                    {
+                        reason = ` (right larger)`;
+                    }
+                    else
+                    {
+                        reason = ` (content)`;
+                    }
+                    console.log(`different: ${si} <> ${ti}${reason}`)
+                    different++;
                 }
             }
-
         });
 
         targetItems.forEach(i => {
@@ -72,7 +106,10 @@ function processDir(source, target, options)
             if (options.shouldExcludeTarget(si))
                 return;
             if (!options.noLeft)
+            {
                 console.log(`  missing: ${si}`);
+                leftMissing++;
+            }
         });
     }
     catch (err)
@@ -107,6 +144,11 @@ module.exports = function main(args)
                 help: "Don't show missing files in the right directory",
             },
             {
+                name: "--attrs",
+                default: false,
+                help: "Compare by file attributes only",
+            },
+            {
                 name: "--exclude:<spec>",
                 default: [],
                 help: "Glob pattern for files to exclude",
@@ -124,8 +166,16 @@ module.exports = function main(args)
     cl.shouldExcludeSource = (x) => excluder(x.substring(cl.left.length));
     cl.shouldExcludeTarget = (x) => excluder(x.substring(cl.right.length));
 
+    // Open data base if required
+    if (!cl.attrs)
+    {
+        cl.db = new hashfileDatabase();
+    }
+
     // Process
     processDir(cl.left, cl.right, cl);
+
+    console.log(`Left missing: ${leftMissing}  Right Missing: ${rightMissing}  Different: ${different}`)
 }
 
 
