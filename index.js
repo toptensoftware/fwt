@@ -18,6 +18,10 @@ var parser = commandLineParser.parser({
             help: "Find duplicate files"
         },
         {
+            name: "index",
+            help: "Build and update file hash indicies"
+        },
+        {
             name: "--help",
             help: "Show this help",
             terminal: true,
@@ -38,6 +42,9 @@ if (!cl.$command)
     parser.show_help();
     return;
 }
+
+if (cl.$command == "index")
+    cl.$command = "updateIndex";
 
 // Dispatch it
 require('./' + cl.$command)(cl.$tail)

@@ -8,12 +8,21 @@ class hashfileDatabase extends Database
 {
     constructor()
     {
-        super(path.join(os.homedir(), ".fwt.db"));
+        super(hashfileDatabase.filename);
 
         // Migrate
         this.migrate([
             () => this.migrate_1(),
         ]);
+
+        this.hashed = 0;
+        this.moved = 0;
+        this.purged = 0;
+    }
+
+    static get filename()
+    {
+        return path.join(os.homedir(), ".fwt.db");
     }
 
     are_files_equal(a, b, lazy)
@@ -45,30 +54,42 @@ class hashfileDatabase extends Database
             throw new Error(`${file} is not a file`);
         
         // Look up database
-        var found;
-        if (lazy)
+        var found = this.findOne("Files", {
+            dir: path.dirname(file),
+            name: path.basename(file),
+            size: stat.size,
+            timestamp: stat.mtimeMs,
+        });
+
+        if (lazy && !found)
         {
-            var found = this.findOne("Files", {
+            found = this.findOne("Files", {
                 name: path.basename(file),
                 size: stat.size,
                 timestamp: stat.mtimeMs,
             });
-        }
-        else
-        {
-            var found = this.findOne("Files", {
-                dir: path.dirname(file),
-                name: path.basename(file),
-                size: stat.size,
-                timestamp: stat.mtimeMs,
-            });
+
+            if (found)
+            {
+                this.insertOrReplace("Files", {
+                    dir: path.dirname(file),
+                    name: path.basename(file),
+                    size: stat.size,
+                    timestamp: stat.mtimeMs,
+                    hash: found.hash
+                });
+                this.moved++;
+            }
         }
 
         if (found)
+        {
             return found.hash;
+        }
 
         // Hash the file
         let hash = hashfile(file);
+        this.hashed++;
 
         // Store in database
         this.insertOrReplace("Files", {
@@ -82,12 +103,31 @@ class hashfileDatabase extends Database
         return hash;
     }
 
+    purge()
+    {
+        let idsToDelete = [];
+        for (let f of this.iterate("SELECT * FROM Files"))
+        {
+            if (!fs.existsSync(path.join(f.dir, f.name)))
+            {
+                idsToDelete.push(f.id);
+            }
+        }
+
+        for (let id of idsToDelete)
+        {
+            this.delete("Files", { id });
+        }
+        this.purged += idsToDelete.length;
+    }
+
 
     migrate_1()
     {
         this.createTable({
             tableName: "Files",
             columns: [
+                { id: "INTEGER PRIMARY KEY AUTOINCREMENT" },
                 { dir: "STRING NOT NULL" },                 // Directory name
                 { name: "STRING NOT NULL" },                // File name
                 { size: "INTEGER NOT NULL" },               // Bytes

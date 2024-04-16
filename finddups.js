@@ -8,7 +8,7 @@ let filemap = new Map();
 
 function processDir(source, options)
 {
-    console.log(`indexing: ${source}\n`);
+    console.log(`indexing: ${source}`);
     try
     {
         // Process all items in the source directory
