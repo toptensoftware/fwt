@@ -328,6 +328,25 @@ function format_help(spec)
 {
     let help = [];
 
+    // Commands last
+    let first = true;
+    for (let s of spec)
+    {
+        if (!s.help || s.type!="command")
+            continue;
+
+        if (first)
+        {
+            help.push(["      <command>", ""])
+            first = false;
+        }
+
+        help.push([
+            `        ${s.name}`,
+            s.help
+        ])
+    }
+    
     // Positional args first
     for (let s of spec)
     {
@@ -371,24 +390,6 @@ function format_help(spec)
     }
 
 
-    // Commands last
-    let first = true;
-    for (let s of spec)
-    {
-        if (!s.help || s.type!="command")
-            continue;
-
-        if (first)
-        {
-            help.push(["      <command>", ""])
-            first = false;
-        }
-
-        help.push([
-            `        ${s.name}`,
-            s.help
-        ])
-    }
 
     return format_aligned(help).trimEnd();
 }
@@ -624,7 +625,7 @@ function show_version(options)
 }
 
 // Helper to show version and help info
-function show_help(spec, options)
+function show_help(options)
 {
     // Show version
     if (options.packageDir)
@@ -644,12 +645,12 @@ function show_help(spec, options)
     if (usagePrefix.length)
         usagePrefix += ' ';
     usagePrefix = ` Usage: ${usagePrefix}`;
-    console.log(break_line(`${usagePrefix}${format_usage(spec)}`, process.stdout.columns, "".padEnd(usagePrefix.length, ' '), ''));
+    console.log(break_line(`${usagePrefix}${format_usage(options.spec)}`, process.stdout.columns, "".padEnd(usagePrefix.length, ' '), ''));
     console.log("");
 
     // Output help
     console.log(" Options:");
-    console.log(format_help(spec));
+    console.log(format_help(options.spec));
 }
 
 // Helper to show version or help if user asked for it

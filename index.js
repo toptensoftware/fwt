@@ -35,10 +35,9 @@ var parser = commandLineParser.parser({
 let cl = parser.parse(process.argv.slice(2));
 if (!cl.$command)
 {
-    parser.handle_help(cl);
+    parser.show_help();
     return;
 }
-parser.check(cl);
 
 // Dispatch it
 require('./' + cl.$command)(cl.$tail)
