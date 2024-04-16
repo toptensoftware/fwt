@@ -13,8 +13,8 @@
             ],
             "program": "${workspaceFolder}\\index.js",
             "args": [
-                "index",
-                "dira", "dirb",
+                "compare",
+                "--help",
             ]
         }
     ]

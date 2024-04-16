@@ -654,7 +654,7 @@ function show_help(options)
 }
 
 // Helper to show version or help if user asked for it
-function handle_help(spec, cl, options)
+function handle_help(options, cl)
 {
     if (cl.version)
     {
@@ -664,7 +664,7 @@ function handle_help(spec, cl, options)
     
     if (cl.help)
     {
-        show_help(spec, options);
+        show_help(options);
         process.exit(0);
     }
 }
@@ -683,7 +683,7 @@ function parser(options)
         format_help: () => format_help(options.spec),
         show_version: () => show_version(options),
         show_help: () => show_help(options),
-        handle_help: (cl) => handle_help(options.spec, cl, options),
+        handle_help: (cl) => handle_help(options, cl),
     }
 }
 
