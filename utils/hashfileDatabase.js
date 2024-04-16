@@ -16,7 +16,7 @@ class hashfileDatabase extends Database
         ]);
     }
 
-    get_hash_of_file(file)
+    get_hash_of_file(file, lazy)
     {
         // Resolve to absolute path
         file = path.resolve(file);
@@ -25,13 +25,27 @@ class hashfileDatabase extends Database
         var stat = fs.statSync(file);
         if (!stat.isFile())
             throw new Error(`${file} is not a file`);
-
+        
         // Look up database
-        var found = this.findOne("Files", {
-            path: file,
-            size: stat.size,
-            timestamp: stat.mtimeMs,
-        });
+        var found;
+        if (lazy)
+        {
+            var found = this.findOne("Files", {
+                name: path.basename(file),
+                size: stat.size,
+                timestamp: stat.mtimeMs,
+            });
+        }
+        else
+        {
+            var found = this.findOne("Files", {
+                dir: path.dirname(file),
+                name: path.basename(file),
+                size: stat.size,
+                timestamp: stat.mtimeMs,
+            });
+        }
+
         if (found)
             return found.hash;
 
@@ -40,7 +54,8 @@ class hashfileDatabase extends Database
 
         // Store in database
         this.insertOrReplace("Files", {
-            path: file,
+            dir: path.dirname(file),
+            name: path.basename(file),
             size: stat.size,
             timestamp: stat.mtimeMs,
             hash: hash
@@ -55,15 +70,20 @@ class hashfileDatabase extends Database
         this.createTable({
             tableName: "Files",
             columns: [
-                { path: "STRING NOT NULL" },                    // Plain file name
-                { size: "INTEGER NOT NULL" },                   // Bytes
-                { timestamp: "INTEGER NOT NULL" },                            // Date taken in UTC unix epoch milliseconds
-                { hash: "STRING NOT NULL" },                          // The date taken but in local time unix epoch milliseconds
+                { dir: "STRING NOT NULL" },                 // Directory name
+                { name: "STRING NOT NULL" },                // File name
+                { size: "INTEGER NOT NULL" },               // Bytes
+                { timestamp: "INTEGER NOT NULL" },          // Modified time in milliseconds
+                { hash: "STRING NOT NULL" },                // File Hash
             ],
             indicies: [
                 { 
                     unique: true,
-                    columns: [ "path" ],
+                    columns: [ "dir", "name" ],
+                },
+                { 
+                    unique: false,
+                    columns: [ "name" ],
                 },
                 {
                     unique: false,

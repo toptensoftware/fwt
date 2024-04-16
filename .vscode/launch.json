@@ -11,10 +11,11 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\utils/glob.js",
+            "program": "${workspaceFolder}\\index.js",
             "args": [
                 "finddups",
-                "\\\\cool\\photos\\2003"
+                "dira",
+                "dirb",
             ]
         }
     ]

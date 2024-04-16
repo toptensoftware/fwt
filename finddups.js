@@ -8,7 +8,7 @@ let filemap = new Map();
 
 function processDir(source, options)
 {
-    process.stdout.write(`indexing: ${source}\n`);
+    console.log(`indexing: ${source}\n`);
     try
     {
         // Process all items in the source directory
@@ -29,7 +29,7 @@ function processDir(source, options)
             }
 
             // Get the hash of the file
-            let hash = options.db.get_hash_of_file(sourceItem);
+            let hash = options.db.get_hash_of_file(sourceItem, !options.strict);
 
             filemap.set(sourceItem, hash);
 
@@ -65,6 +65,11 @@ module.exports = function main(args)
                 default: [],
                 help: "The directories to check",
             },
+            {
+                name: "--strict",
+                default: true,
+                help: "Use full directory, file name and attributes in cache file lookup.  Otherwise filename and attributes only. (default true)",   
+            }
         ]
     });
 
@@ -90,7 +95,7 @@ module.exports = function main(args)
     });
 
     // Now look for directories where every file has a duplicate somewhere else
-    console.log("Duplicate Directories:")
+    let dupDirsPrelim = new Set();
     dirsWithDups.forEach(dir => {
 
         // Process all items in the source directory
@@ -107,10 +112,64 @@ module.exports = function main(args)
                     return;
 
                 let filesWithHash = hashmap.get(hash);
-                if (!filesWithHash || filesWithHash.length < 2)
-                    return; 
+                if (!filesWithHash)
+                    return;
+                if (filesWithHash.length < 2)
+                    return;
+
+                if (!filesWithHash.some(x => {
+                    var rel = path.relative(path.dirname(filepath), path.dirname(x));
+                    return rel.startsWith("..") || rel.startsWith("/") || rel.startsWith("\\");
+                    }))
+                    return;
             }
         }
-        console.log(dir);
+        dupDirsPrelim.add(dir);
     });
+
+    // Now find all the directories where not only all the files are duplicated
+    // but also all the sub-directories are also fully recursively duplicated
+    let dupDirsFinal = new Set();
+    function checkAllSubDirsDup(x)
+    {
+        // Already checked
+        if (dupDirsFinal.has(x))
+            return true;
+
+        // Are all files duplicate?
+        if (!dupDirsPrelim.has(x))
+            return false;
+
+        // Check all sub-directories are fully duplicated
+        for (let e of fs.readdirSync(x))
+        {
+            var item = path.join(x, e);
+            var stat = fs.statSync(item);
+            if (!stat.isDirectory())
+                continue;
+            if (!checkAllSubDirsDup(item))
+                return false;
+        }
+
+        // It really it duplicated!
+        dupDirsFinal.add(x);
+        return true;
+    }
+    dupDirsPrelim.forEach(x => checkAllSubDirsDup(x));
+    
+    // Sort and remove sub-directories as they're implicitly duplicated by the parent being fully duplciated
+    let dupDirsSorted = [...dupDirsFinal];
+    dupDirsSorted.sort();
+    for (let i=0; i<dupDirsSorted.length; i++)
+    {
+        while (i + 1 < dupDirsSorted.length && dupDirsSorted[i+1].startsWith(dupDirsSorted[i] + path.sep))
+            dupDirsSorted.splice(i+1, 1);
+    }
+
+    // List the fully duplicated directories
+    if (dupDirsFinal.size > 0)
+    {
+        console.log("Fully duplicated directories:")
+        dupDirsSorted.forEach(x => console.log(x));
+    }
 }

@@ -2,12 +2,14 @@ let path = require('path');
 let fs = require('fs');
 let areFilesEqual = require('./utils/areFilesEqual');
 let commandLineParser = require('./utils/commandLineParser');
+let os = require('os');
+let makeExcluder = require('./utils/makeExcluder');
 
 let copyCount = 0;
 let skipCount = 0;
 let conflictCount = 0;
 
-function processDir(source, target)
+function processDir(source, target, options)
 {
     try
     {
@@ -27,9 +29,17 @@ function processDir(source, target)
             
             // Is the source item a directory
             let statSource = fs.statSync(sourceItem);
+
+            // Check if should exclude
+            if (statSource.isDirectory())
+                sourceItem += "/";
+            if (options.shouldExclude(sourceItem))
+                continue;
+
+            // Recurse?
             if (statSource.isDirectory())
             {
-                processDir(sourceItem, targetItem);
+                processDir(sourceItem, targetItem, options);
                 continue;
             }
 
@@ -39,14 +49,14 @@ function processDir(source, target)
                 // Doesn't exist, copy it
                 fs.copyFileSync(sourceItem, targetItem);
                 copyCount++;
-                process.stdout.write(`${sourceItem} => ${targetItem}\n`);
+                console.log(`${sourceItem} => ${targetItem}`);
                 continue;
             }
 
             // Check if files are the same
             if (areFilesEqual(sourceItem, targetItem))
             {
-                process.stdout.write(`${sourceItem} == ${targetItem}\n`);
+                console.log(`${sourceItem} == ${targetItem}`);
                 skipCount++;
                 continue;
             }
@@ -59,7 +69,7 @@ function processDir(source, target)
                 {
                     if (areFilesEqual(sourceItem, targetItem))
                     {
-                        process.stdout.write(`${sourceItem} == ${targetItem}\n`);
+                        console.log(`${sourceItem} == ${targetItem}`);
                         skipCount++;
                         break;
                     }
@@ -70,7 +80,7 @@ function processDir(source, target)
                     fs.copyFileSync(sourceItem, targetItem);
                     copyCount++;
                     conflictCount++;
-                    process.stdout.write(`${sourceItem} => ${targetItem}\n`);
+                    console.log(`${sourceItem} => ${targetItem}`);
                     break;
                 }
 
@@ -138,14 +148,27 @@ module.exports = function main(args)
                 name: "<target>",
                 help: "The 'target' directory to merge to",
             },
+            {
+                name: "--exclude:<spec>",
+                default: [],
+                help: "Glob pattern for files to exclude",
+            },
+            {
+                name: "--icase",
+                help: "Case insensitive exclude patten matching (default is true for Windows, else false)",
+                default: os.platform() === 'win32',
+            },
         ]
     });
 
+    var excluder = makeExcluder(cl);
+    cl.shouldExclude = (x) => excluder(x.substring(cl.source.length));
+
     // Process directories
-    processDir(cl.source, cl.target);
+    processDir(cl.source, cl.target, cl);
 
     // Show summary
-    process.stdout.write(`copied: ${copyCount} skipped: ${skipCount} conflicts: ${conflictCount}\n`);
+    console.log(`copied: ${copyCount} skipped: ${skipCount} conflicts: ${conflictCount}\n`);
 }
 
 
