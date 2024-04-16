@@ -64,8 +64,9 @@ module.exports = function main(args)
         {
             if (f.isDirectory())
                 continue;
-            if (!excluder(f))
-                files.push(path.join(f.path, f.name));
+            var fullpath = path.join(f.path, f.name)
+            if (!excluder(fullpath))
+                files.push(fullpath);
         }
     }
 

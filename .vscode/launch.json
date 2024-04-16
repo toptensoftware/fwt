@@ -14,8 +14,6 @@
             "program": "${workspaceFolder}\\index.js",
             "args": [
                 "index",
-                "--move",
-                "--trim",
                 "dira", "dirb",
             ]
         }
