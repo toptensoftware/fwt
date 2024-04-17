@@ -212,31 +212,46 @@ class hashfileDatabase extends Database
             }
         }
 
-        // Calculate hashes
-        for (let i = 0; i<files.length; i++)
+        this.run("SAVEPOINT indexing");
+
+        try
         {
-            process.stdout.clearLine();
-            process.stdout.cursorTo(0); 
-            process.stdout.write(`Indexing ${i+1} of ${files.length} - ${files[i]}`)
-            try
-            {
-                files[i] = {
-                    filename: files[i],
-                    hash: this.get_hash_of_file(files[i], options.move),
-                }
-            }
-            catch (err)
+            // Calculate hashes
+            for (let i = 0; i<files.length; i++)
             {
                 process.stdout.clearLine();
-                process.stdout.cursorTo(0);
-                process.stderr.write(`${err.message}\n`);
-                files.splice(i, 1);
-                i--;
-            }
-        }
+                process.stdout.cursorTo(0); 
+                process.stdout.write(`Indexing ${i+1} of ${files.length} - ${files[i]}`)
+                try
+                {
+                    files[i] = {
+                        filename: files[i],
+                        hash: this.get_hash_of_file(files[i], options.move),
+                    }
+                }
+                catch (err)
+                {
+                    process.stdout.clearLine();
+                    process.stdout.cursorTo(0);
+                    process.stderr.write(`${err.message}\n`);
+                    files.splice(i, 1);
+                    i--;
+                }
 
-        process.stdout.clearLine();
-        process.stdout.cursorTo(0); 
+                if (i % 1000 == 0)
+                {
+                    this.run("RELEASE SAVEPOINT indexing");
+                    this.run("SAVEPOINT indexing");
+                }
+            }
+
+            process.stdout.clearLine();
+            process.stdout.cursorTo(0); 
+        }
+        finally
+        {
+            this.run("RELEASE SAVEPOINT indexing");
+        }
 
         return files;
     }
