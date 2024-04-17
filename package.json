@@ -1,6 +1,6 @@
 {
   "name": "fwt",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "File Wranging Tool",
   "copyright": "Copyright © 2024 Topten Software",
   "main": "index.js",

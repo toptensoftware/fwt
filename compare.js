@@ -118,7 +118,21 @@ function processDir(source, target, options)
     }
 }
 
-
+function buildHashMap(files)
+{
+    let map = new Map();
+    for (let f of files)
+    {
+        let list = map.get(f.hash);
+        if (!list)
+        {
+            list = [];
+            map.set(f.hash, list);
+        }
+        list.push(f.filename);
+    }
+    return map;
+}
 
 module.exports = function main(args)
 {
@@ -144,9 +158,13 @@ module.exports = function main(args)
                 help: "Don't show missing files in the right directory",
             },
             {
+                name: "--content",
+                help: "Compare files by content only (ignore file names and attributes)"
+            },
+            {
                 name: "--attrs",
                 default: false,
-                help: "Compare by file attributes only",
+                help: "Compare by file attributes only (ignore content)",
             },
             {
                 name: "--exclude:<spec>",
@@ -161,21 +179,67 @@ module.exports = function main(args)
         ]
     });
 
-    // Make pattern excluders
-    var excluder = makeExcluder(cl);
-    cl.shouldExcludeSource = (x) => excluder(x.substring(cl.left.length));
-    cl.shouldExcludeTarget = (x) => excluder(x.substring(cl.right.length));
-
-    // Open data base if required
-    if (!cl.attrs)
+    if (cl.attrs && cl.attrs)
     {
-        cl.db = new hashfileDatabase();
+        throw new Error("Please specify just one of --attrs or --content");
     }
 
-    // Process
-    processDir(cl.left, cl.right, cl);
+    if (cl.content)
+    {
+        let db = new hashfileDatabase();
 
-    console.log(`Left missing: ${leftMissing}  Right Missing: ${rightMissing}  Different: ${different}`)
+        // Index left and right sides
+        let leftFiles = db.indexFiles([cl.left], cl);
+        let rightFiles = db.indexFiles([cl.right], cl);
+
+        if (!cl.noLeft)
+        {
+            console.log("Files in left with no equivalent in right:")
+            let rightMap = buildHashMap(rightFiles);
+            let missing = 0;
+            for (let lf of leftFiles)
+            {
+                if (!rightMap.has(lf.hash))
+                {
+                    console.log(`  ${lf.filename}`);
+                    missing++;
+                }
+            }
+            console.log(`Total: ${missing}`);
+        }
+        if (!cl.noRight)
+        {
+            console.log("Files in right with no equivalent in left:")
+            let leftMap = buildHashMap(leftFiles);
+            let missing = 0;
+            for (let rf of rightFiles)
+            {
+                if (!leftMap.has(rf.hash))
+                {
+                    console.log(`  ${rf.filename}`);
+                    missing++;
+                }
+            }
+            console.log(`Total: ${missing}`);
+        }
+    }
+    else
+    {
+        // Make pattern excluders
+        var excluder = makeExcluder(cl);
+        cl.shouldExcludeSource = (x) => excluder(x.substring(cl.left.length));
+        cl.shouldExcludeTarget = (x) => excluder(x.substring(cl.right.length));
+
+        // Open data base if required
+        if (!cl.attrs)
+        {
+            cl.db = new hashfileDatabase();
+        }
+
+        // Process
+        processDir(cl.left, cl.right, cl);
+        console.log(`Left missing: ${leftMissing}  Right Missing: ${rightMissing}  Different: ${different}`)
+    }
 }
 
 

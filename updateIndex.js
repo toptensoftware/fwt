@@ -3,7 +3,6 @@ let os = require('os');
 let fs = require('fs');
 let commandLineParser = require('./utils/commandLineParser');
 let hashfileDatabase = require('./utils/hashfileDatabase')
-let makeExcluder = require('./utils/makeExcluder');
 
 module.exports = function main(args)
 {
@@ -28,6 +27,11 @@ module.exports = function main(args)
                 help: "Purge no longer existing files from indicies"
             },
             {
+                name: "--import:<other>",
+                default: [],
+                help: "Import cache entries from another .fwt.db file"
+            },
+            {
                 name: "--reset",
                 help: "Delete all previously built indicies"
             },
@@ -37,6 +41,33 @@ module.exports = function main(args)
                 help: "Glob pattern for files to exclude",
             },
             {
+                name: "--remap:<from:to>",
+                default: [],
+                help: "Remap directories"
+            },
+            {
+                name: "--delete:<dir>",
+                default: [],
+                help: "Delete hash maps for specified directories",
+            },
+            {
+                name: "--db:<dbfile>",
+                default: null,
+                help: "The index database file to use (default = ~/.fwt.db)",
+            },
+            {
+                name: "--stat",
+                help: "Show index"
+            },
+            {
+                name: "--rootdirs",
+                help: "Show root indexed directories"
+            },
+            {
+                name: "--dirs",
+                help: "Show all indexed directories"
+            },
+            {
                 name: "--icase",
                 help: "Case insensitive exclude patten matching (default is true for Windows, else false)",
                 default: os.platform() === 'win32',
@@ -44,48 +75,80 @@ module.exports = function main(args)
         ]
     });
 
+    // Work out database file to use
+    if (cl.db)
+    {
+        try
+        {
+            let s = fs.statSync(cl.db);
+            if (s.isDirectory())
+                cl.db += ".fwt.db";
+        }
+        catch
+        {
+        }
+    }
+
     // Delete database file
     if (cl.reset)
     {
-        let filename = hashfileDatabase.filename;
+        let filename = cl.db ?? hashfileDatabase.filename;
         if (fs.existsSync(filename))
             fs.unlinkSync(filename);
     }
 
     // Open data
-    let db =  new hashfileDatabase();
-    
-    // Find files
-    var excluder = makeExcluder(cl);
-    let files = []
-    for (let i=0; i<cl.dir.length; i++)
+    let db =  new hashfileDatabase(cl.db);
+
+    // Delete
+    for (let d of cl.delete)
     {
-        for (let f of fs.readdirSync(cl.dir[i], { recursive: true, withFileTypes: true }))
-        {
-            if (f.isDirectory())
-                continue;
-            var fullpath = path.join(f.path, f.name)
-            if (!excluder(fullpath))
-                files.push(fullpath);
-        }
+        db.deleteDir(d);
     }
 
-    // Calculate hashes
-    for (let i = 0; i<files.length; i++)
+    // Import
+    for (let i of cl.import)
     {
-        process.stdout.clearLine();
-        process.stdout.cursorTo(0); 
-        process.stdout.write(`Indexing ${i+1} of ${files.length} - ${files[i]}`)
-        db.get_hash_of_file(files[i], cl.move);
+        db.import(i);
     }
 
-    process.stdout.clearLine();
-    process.stdout.cursorTo(0); 
+    // Remap
+    for (let r of cl.remap)
+    {
+        let parts = r.split(":");
+        if (parts.length != 2)
+            throw new Error(`Invalid remap: ${r}`);
+        db.remap(parts[0], parts[1]);
+    }
+
+    // Index files
+    if (cl.dir.length > 0)
+    {
+        db.indexFiles(cl.dir, cl);
+    }
 
     // Purge
     if (cl.purge)
     {
         db.purge();
+    }
+
+    // Stats?
+    if (cl.rootdirs)
+    {
+        db.showDirectories(true);
+    }
+    
+    // Stats?
+    if (cl.dirs)
+    {
+        db.showDirectories(false);
+    }
+    
+    // Stats?
+    if (cl.stat)
+    {
+        db.showStats();
     }
 
     console.log(`${db.hashed} new, ${db.moved} moved, ${db.purged} removed.`)

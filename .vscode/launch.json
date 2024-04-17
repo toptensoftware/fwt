@@ -13,9 +13,8 @@
             ],
             "program": "${workspaceFolder}\\index.js",
             "args": [
-                "remap",
-                "C:\\BLAH",
-                "C:\\Users\\Brad\\Projects\\fwt\\dira",
+                "finddups",
+                "\\\\cool\\photos",
             ]
         }
     ]

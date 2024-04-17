@@ -3,12 +3,15 @@ let fs = require('fs');
 let path = require('path');
 let hashfile = require('./hashfile');
 let {  Database, SQL } = require('@toptensoftware/sqlite');
+let makeExcluder = require('./makeExcluder');
 
 class hashfileDatabase extends Database
 {
-    constructor()
+    constructor(dbfile)
     {
-        super(hashfileDatabase.filename);
+        dbfile = dbfile ?? hashfileDatabase.filename;
+        super(dbfile);
+        this.filename = dbfile;
 
         // Migrate
         this.migrate([
@@ -23,6 +26,55 @@ class hashfileDatabase extends Database
     static get filename()
     {
         return path.join(os.homedir(), ".fwt.db");
+    }
+
+    showStats()
+    {
+        console.log(`${this.filename}:`);
+        console.log(`        files: ${this.pluck("SELECT COUNT(*) FROM Files")}`);
+        console.log(`  directories: ${this.pluck("SELECT COUNT(DISTINCT(dir)) FROM Files")}`);
+    }
+
+    showDirectories(roots)
+    {
+        var dirs = this.all("select dir, count(*) as fileCount from files group by dir");
+        if (roots)
+        {
+            for (let i=0; i<dirs.length - 1; i++)
+            {
+                if (dirs[i+1].dir.startsWith(dirs[i].dir))
+                {
+                    dirs[i].fileCount += dirs[i+1].fileCount;
+                    dirs.splice(i+1, 1);
+                    i--;
+                }
+            }
+        }
+
+        dirs.forEach(x => console.log(`${x.fileCount.toString().padStart(10, ' ')} ${x.dir}`));
+    }
+
+    import(from)
+    {
+        this.run("ATTACH DATABASE ?  AS other", from);
+        try
+        {
+            this.transactionSync(() => {
+                console.log(`Importing ${from}...`)
+                let r = this.run("INSERT INTO Files(dir,name,size,timestamp,hash) SELECT dir,name,size,timestamp,hash FROM other.Files");
+                this.hashed += r.changes;
+                this.fix_slashes();
+            });
+        }
+        finally
+        {
+            this.run("DETACH DATABASE other");
+        }
+    }
+
+    fix_slashes()
+    {
+        this.run("update files set dir = replace(dir, ?, ?)", path.sep == '/' ? '\\' : '/', path.sep);
     }
 
     are_files_equal(a, b, lazy)
@@ -123,13 +175,72 @@ class hashfileDatabase extends Database
 
     remap(from, to)
     {
+        console.log(`Remapping ${from} to ${to}...`)
         let sql = SQL
             .update("Files")
             .append("SET dir=? || SUBSTR(dir, ?)", to, from.length + 1)
             .append("WHERE dir = ? OR SUBSTR(dir, 1, ?) = ?", from, from.length + 1, from + path.sep);
+        sql.log();
         let r = this.run(sql);
         console.log(`Remapped ${r.changes} files`);
     }
+
+    deleteDir(dir)
+    {
+        console.log(`Deleting ${dir}...`)
+        let sql = SQL
+            .delete("Files")
+            .append("WHERE dir = ? OR SUBSTR(dir, 1, ?) = ?", dir, dir.length + 1, dir + path.sep);
+        let r = this.run(sql);
+        console.log(`Deleted ${r.changes} files`);
+    }
+
+    indexFiles(dirs, options)
+    {
+        // Find files
+        var excluder = makeExcluder(options);
+        let files = []
+        for (let i=0; i<dirs.length; i++)
+        {
+            for (let f of fs.readdirSync(dirs[i], { recursive: true, withFileTypes: true }))
+            {
+                if (f.isDirectory())
+                    continue;
+                var fullpath = path.join(f.path, f.name)
+                if (!excluder(fullpath))
+                    files.push(fullpath);
+            }
+        }
+
+        // Calculate hashes
+        for (let i = 0; i<files.length; i++)
+        {
+            process.stdout.clearLine();
+            process.stdout.cursorTo(0); 
+            process.stdout.write(`Indexing ${i+1} of ${files.length} - ${files[i]}`)
+            try
+            {
+                files[i] = {
+                    filename: files[i],
+                    hash: this.get_hash_of_file(files[i], options.move),
+                }
+            }
+            catch (err)
+            {
+                process.stdout.clearLine();
+                process.stdout.cursorTo(0);
+                process.stderr.write(`${err.message}\n`);
+                files.splice(i, 1);
+                i--;
+            }
+        }
+
+        process.stdout.clearLine();
+        process.stdout.cursorTo(0); 
+
+        return files;
+    }
+
 
     migrate_1()
     {
