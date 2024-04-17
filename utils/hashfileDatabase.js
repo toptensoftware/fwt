@@ -166,10 +166,12 @@ class hashfileDatabase extends Database
             }
         }
 
-        for (let id of idsToDelete)
-        {
-            this.delete("Files", { id });
-        }
+        this.transactionSync(() => {
+            for (let id of idsToDelete)
+            {
+                this.delete("Files", { id });
+            }
+        })
         this.purged += idsToDelete.length;
     }
 
