@@ -1,6 +1,6 @@
 {
   "name": "fwt",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "File Wranging Tool",
   "copyright": "Copyright © 2024 Topten Software",
   "main": "index.js",
@@ -26,6 +26,8 @@
   "dependencies": {
     "@toptensoftware/sqlite": "github:toptensoftware/sqlite",
     "better-sqlite3": "^9.5.0",
-    "moment": "^2.30.1"
+    "glob": "^10.3.12",
+    "moment": "^2.30.1",
+    "string-natural-compare": "^3.0.1"
   }
 }

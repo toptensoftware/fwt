@@ -22,6 +22,10 @@ var parser = commandLineParser.parser({
             help: "Build and update file hash indicies"
         },
         {
+            name: "renum",
+            help: "Renumber files",
+        },
+        {
             name: "--help",
             help: "Show this help",
             terminal: true,

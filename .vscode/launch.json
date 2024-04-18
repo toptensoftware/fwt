@@ -13,8 +13,8 @@
             ],
             "program": "${workspaceFolder}\\index.js",
             "args": [
-                "index",
-                "--query:*DSC_0369*",
+                "renum",
+                "dira/newname-*.txt", "t13+.txt"
             ]
         }
     ]

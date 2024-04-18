@@ -23,6 +23,10 @@ class hashfileDatabase extends Database
         this.moved = 0;
         this.purged = 0;
         this.function("regexp", (str, rx) => {
+            let r = str.match(new RegExp(rx, "")) != null;
+            return r ? 1 : 0;
+        })
+        this.function("regexpi", (str, rx) => {
             let r = str.match(new RegExp(rx, "i")) != null;
             return r ? 1 : 0;
         })
@@ -263,10 +267,13 @@ class hashfileDatabase extends Database
         return files;
     }
 
-    query(spec)
+    query(spec, icase)
     {
         let rx = glob(spec);
-        return this.all("SELECT * FROM FILES WHERE regexp(dir || ? || name, ?)", path.sep, rx);
+        if (icase)
+            return this.all("SELECT * FROM FILES WHERE regexpi(dir || ? || name, ?)", path.sep, rx);
+        else
+            return this.all("SELECT * FROM FILES WHERE regexp(dir || ? || name, ?)", path.sep, rx);
     }
 
     queryByName(name)

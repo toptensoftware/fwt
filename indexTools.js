@@ -160,10 +160,12 @@ module.exports = function main(args)
     // Query?
     if (cl.query.length > 0)
     {
+        let total = 0;
         for (let q of cl.query)
         {
-            for (let f of db.query(q))
+            for (let f of db.query(q, cl.icase))
             {
+                total++;
                 let t = new Date(f.timestamp);
                 console.log(`${f.dir}${path.sep}${f.name}`);
                 console.log(`  - size: ${f.size}`);
@@ -195,6 +197,7 @@ module.exports = function main(args)
                 }
             }
         }
+        console.log(`${total} files found`)
     }
 }
 
