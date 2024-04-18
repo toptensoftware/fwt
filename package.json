@@ -25,6 +25,7 @@
   "preferGlobal": true,
   "dependencies": {
     "@toptensoftware/sqlite": "github:toptensoftware/sqlite",
-    "better-sqlite3": "^9.5.0"
+    "better-sqlite3": "^9.5.0",
+    "moment": "^2.30.1"
   }
 }

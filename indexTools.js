@@ -68,6 +68,11 @@ module.exports = function main(args)
                 help: "Show all indexed directories"
             },
             {
+                name: "--query:<filespec>",
+                default: [],
+                help: "Query information about known files",
+            },
+            {
                 name: "--icase",
                 help: "Case insensitive exclude patten matching (default is true for Windows, else false)",
                 default: os.platform() === 'win32',
@@ -125,6 +130,7 @@ module.exports = function main(args)
     if (cl.dir.length > 0)
     {
         db.indexFiles(cl.dir, cl);
+        console.log(`${db.hashed} new, ${db.moved} moved, ${db.purged} removed.`)
     }
 
     // Purge
@@ -133,23 +139,80 @@ module.exports = function main(args)
         db.purge();
     }
 
-    // Stats?
+    // Show root directories
     if (cl.rootdirs)
     {
         db.showDirectories(true);
     }
     
-    // Stats?
+    // Show all directories
     if (cl.dirs)
     {
         db.showDirectories(false);
     }
     
-    // Stats?
+    // Show stats
     if (cl.stat)
     {
         db.showStats();
     }
 
-    console.log(`${db.hashed} new, ${db.moved} moved, ${db.purged} removed.`)
+    // Query?
+    if (cl.query.length > 0)
+    {
+        for (let q of cl.query)
+        {
+            for (let f of db.query(q))
+            {
+                let t = new Date(f.timestamp);
+                console.log(`${f.dir}${path.sep}${f.name}`);
+                console.log(`  - size: ${f.size}`);
+                console.log(`  - time: ${t.toLocaleDateString()} ${t.toLocaleTimeString()}`);
+                console.log(`  - hash: ${f.hash}`);
+
+                let sameNames = db.queryByName(f.name);
+                if (sameNames.length > 1)
+                {
+                    console.log(`  - files with same name:`);
+                    for (let sn of sameNames)
+                    {
+                        if (sn.dir == f.dir)
+                            continue;
+                        console.log(`    - ${sn.dir}${path.sep}${sn.name}${format_diffs(sn, f)}`);
+                    }
+                }
+
+                let sameHashs = db.queryByHash(f.hash);
+                if (sameHashs.length > 1)
+                {
+                    console.log(`  - files with same content:`);
+                    for (let sh of sameHashs)
+                    {
+                        if (sh.dir == f.dir)
+                            continue;
+                        console.log(`    - ${sh.dir}${path.sep}${sh.name}${format_diffs(sh, f)}`);
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+function format_diffs(a, b)
+{
+    let diffs = [];
+    if (a.size > b.size)
+        diffs.push("larger");
+    if (a.size < b.size)
+        diffs.push("smaller");
+    if (a.timestamp > b.timestamp)
+        diffs.push("newer");
+    if (a.timestamp < b.timestamp)
+        diffs.push("older");
+    if (a.hash != b.hash)
+        diffs.push("different content");
+    if (diffs.length > 0)
+        return ` (${diffs.join(", ")})`;
+    return "";
 }

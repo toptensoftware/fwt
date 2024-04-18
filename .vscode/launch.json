@@ -13,8 +13,8 @@
             ],
             "program": "${workspaceFolder}\\index.js",
             "args": [
-                "finddups",
-                "\\\\cool\\photos",
+                "index",
+                "--query:*DSC_0369*",
             ]
         }
     ]

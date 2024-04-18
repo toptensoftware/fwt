@@ -4,6 +4,7 @@ let path = require('path');
 let hashfile = require('./hashfile');
 let {  Database, SQL } = require('@toptensoftware/sqlite');
 let makeExcluder = require('./makeExcluder');
+let glob = require('./glob');
 
 class hashfileDatabase extends Database
 {
@@ -21,6 +22,10 @@ class hashfileDatabase extends Database
         this.hashed = 0;
         this.moved = 0;
         this.purged = 0;
+        this.function("regexp", (str, rx) => {
+            let r = str.match(new RegExp(rx, "i")) != null;
+            return r ? 1 : 0;
+        })
     }
 
     static get filename()
@@ -258,6 +263,21 @@ class hashfileDatabase extends Database
         return files;
     }
 
+    query(spec)
+    {
+        let rx = glob(spec);
+        return this.all("SELECT * FROM FILES WHERE regexp(dir || ? || name, ?)", path.sep, rx);
+    }
+
+    queryByName(name)
+    {
+        return this.all("SELECT * FROM FILES WHERE name = ?", name);
+    }
+
+    queryByHash(hash)
+    {
+        return this.all("SELECT * FROM FILES WHERE hash = ?", hash);
+    }
 
     migrate_1()
     {

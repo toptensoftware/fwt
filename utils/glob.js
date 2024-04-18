@@ -2,10 +2,10 @@ function globToRx(glob)
 {
     let rx = "^";
 
-    if (!glob.startsWith("/"))
+    if (!(glob.startsWith("/") || glob.startsWith("\\")))
     {
         // "**/"
-        rx += "([^/]*/)*";
+        rx += "([^/\\\\]*[/\\\\])*";
     }
 
     for (let i=0; i<glob.length; i++)
@@ -16,7 +16,7 @@ function globToRx(glob)
         {
             case '?':
                 // Any Character (except slash)
-                rx += "[^/]";
+                rx += "[^/\\\\]";
                 break;
 
             case '*':
@@ -30,17 +30,17 @@ function globToRx(glob)
                         continue;
                     }
 
-                    if (glob[i+2] == '/')
+                    if (glob[i+2] == '/' || glob[i+2] == '\\')
                     {
                         // '**/" accept anything up to slash
-                        rx += "([^/]*/)*";
+                        rx += "([^/\\\\]*[/\\\\])*";
                         i+=2;           // also consume the '/' from the glob pattern
                         continue;
                     }
                 }
 
                 // Any Characters (except slash)
-                rx += "[^/]*";
+                rx += "[^/\\\\]*";
                 break;
 
             case '[':
@@ -73,6 +73,10 @@ function globToRx(glob)
                 break;
             
             case '\\':
+            case '/':
+                rx += "[/\\\\]";
+                break;
+
             case ']':
             case '{':
             case '}':
@@ -102,8 +106,8 @@ function globToRx(glob)
 
     // If pattern doesn't end with a slash then match
     // either file or directory
-    if (!glob.endsWith('/') && !glob.endsWith('*'))
-        rx += "/?"
+    if (!(glob.endsWith('/') ||glob.endsWith('\\')) && !glob.endsWith('*'))
+        rx += "[/\\\\]?"
 
     rx += '$';
     return rx;

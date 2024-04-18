@@ -22,10 +22,6 @@ var parser = commandLineParser.parser({
             help: "Build and update file hash indicies"
         },
         {
-            name: "remap",
-            help: "Updates the paths of previously indexed files",
-        },
-        {
             name: "--help",
             help: "Show this help",
             terminal: true,
@@ -48,7 +44,7 @@ if (!cl.$command)
 }
 
 if (cl.$command == "index")
-    cl.$command = "updateIndex";
+    cl.$command = "indexTools";
 
 // Dispatch it
 require('./' + cl.$command)(cl.$tail)
