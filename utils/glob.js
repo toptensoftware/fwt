@@ -5,7 +5,7 @@ function globToRx(glob)
     if (!(glob.startsWith("/") || glob.startsWith("\\")))
     {
         // "**/"
-        rx += "([^/\\\\]*[/\\\\])*";
+        rx += "(?:[^/\\\\]*[/\\\\])*";
     }
 
     for (let i=0; i<glob.length; i++)
@@ -15,8 +15,17 @@ function globToRx(glob)
         switch (ch)
         {
             case '?':
+                // How many?
+                let length = 1;
+                while (i + length < glob.length && glob[i + length] == '?')
+                    length++;
+                i += length - 1;
+
                 // Any Character (except slash)
-                rx += "[^/\\\\]";
+                if (length > 1)
+                    rx += `([^/\\\\]{${length}})`;
+                else
+                    rx += `([^/\\\\])`;
                 break;
 
             case '*':
@@ -25,7 +34,7 @@ function globToRx(glob)
                     if (i + 2 == glob.length)
                     {
                         // ** at end, accept anything
-                        rx += ".*";
+                        rx += "(.*)";
                         i++;
                         continue;
                     }
@@ -33,14 +42,14 @@ function globToRx(glob)
                     if (glob[i+2] == '/' || glob[i+2] == '\\')
                     {
                         // '**/" accept anything up to slash
-                        rx += "([^/\\\\]*[/\\\\])*";
+                        rx += "((?:[^/\\\\]*[/\\\\])*)";
                         i+=2;           // also consume the '/' from the glob pattern
                         continue;
                     }
                 }
 
                 // Any Characters (except slash)
-                rx += "[^/\\\\]*";
+                rx += "([^/\\\\]*)";
                 break;
 
             case '[':
@@ -184,6 +193,6 @@ function do_unit_tests()
     console.log("done");
 }
 
-//do_unit_tests();
+do_unit_tests();
 
 module.exports = globToRx;

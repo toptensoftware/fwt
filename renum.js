@@ -26,6 +26,7 @@ module.exports = function main(args)
             {
                 name: "--dryrun",
                 help: "Don't actually do anything, just show what would have happened",
+                default: os.platform() === 'win32',
             },
         ]
     });

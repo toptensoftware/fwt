@@ -26,6 +26,10 @@ var parser = commandLineParser.parser({
             help: "Renumber files",
         },
         {
+            name: "next",
+            help: "Finds the next numbered file that doesn't exist"
+        },
+        {
             name: "--help",
             help: "Show this help",
             terminal: true,

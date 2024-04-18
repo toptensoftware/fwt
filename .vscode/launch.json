@@ -13,8 +13,8 @@
             ],
             "program": "${workspaceFolder}\\index.js",
             "args": [
-                "renum",
-                "dira/newname-*.txt", "t13+.txt"
+                "next",
+                "dira/t13.txt"
             ]
         }
     ]
