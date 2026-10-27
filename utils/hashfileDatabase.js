@@ -297,6 +297,7 @@ class hashfileDatabase extends Database
                 { size: "INTEGER NOT NULL" },               // Bytes
                 { timestamp: "INTEGER NOT NULL" },          // Modified time in milliseconds
                 { hash: "STRING NOT NULL" },                // File Hash
+                { phash: "STRING" },                        // phash
             ],
             indicies: [
                 { 

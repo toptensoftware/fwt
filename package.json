@@ -26,8 +26,11 @@
   "dependencies": {
     "@toptensoftware/sqlite": "github:toptensoftware/sqlite",
     "better-sqlite3": "^9.5.0",
+    "friendly-img-hash-js": "^1.1.2",
     "glob": "^10.3.12",
+    "leven": "^4.0.0",
     "moment": "^2.30.1",
+    "phash-im": "^1.0.1",
     "string-natural-compare": "^3.0.1"
   }
 }

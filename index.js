@@ -30,6 +30,10 @@ var parser = commandLineParser.parser({
             help: "Finds the next numbered file that doesn't exist"
         },
         {
+            name: "phash",
+            helper: "Calculates the phash for a file",
+        },
+        {
             name: "--help",
             help: "Show this help",
             terminal: true,

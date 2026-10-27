@@ -13,8 +13,9 @@
             ],
             "program": "${workspaceFolder}\\index.js",
             "args": [
-                "next",
-                "dira/t13.txt"
+                "phash",
+                "Z:\\Negatives\\VueScanJens\\Photo002.jpg",
+                "Z:\\Negatives\\VueScanJens\\Photo003.jpg",
             ]
         }
     ]
